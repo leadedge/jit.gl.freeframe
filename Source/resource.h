@@ -2,30 +2,8 @@
 #define IDC_STATIC (-1)
 #endif
 
-#define IDM_EXIT                                200
-#define IDM_SENDERNAME                          201
-#define IDM_SPOUTSENDERS                        202
-#define IDM_TOPMOST                             203
-#define IDM_FULLSCREEN                          204
-#define IDM_FITWINDOW                           205
-#define IDM_CAPS                                206
-#define IDM_ABOUT                               207
 #define IDM_PARAMETERS                          208
-#define IDI_SPOUTICON                           300
-#define IDC_WINSPOUT                            302
-#define IDC_ABOUTBOXTEXT                        400
-#define IDC_CAPSTEXT                            402
-#define IDC_COPY                                403
-#define IDC_NAMETEXT                            404
-#define IDD_ABOUTBOX                            500
-#define IDD_CAPSBOX                             501
-#define IDD_NAMEBOX                             502
-#define IDD_CAPTUREBOX                          505
 #define IDD_PARAMETERS                          507
-#define IDD_EFFECTBOX                           509
-#define IDC_CAPTURE                             600
-#define IDC_CAPTURETEXT                         601
-#define IDM_CAPTUREWINDOW                       602
 #define IDC_PARAMTEXT0                          1000
 #define IDC_PARAMNAME0                          1001
 #define IDC_PARAMCLICK0                         1002
@@ -223,4 +201,3 @@
 #define IDC_PARAMSTATE29                        1295
 
 
-#define IDS_APP_TITLE                           40000

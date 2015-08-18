@@ -130,14 +130,6 @@
 #define GL_CLAMP_TO_EDGE				0x812F
 
 #ifndef USE_GLEW
-
-// ----------------------------
-// Memory management extensions
-// ----------------------------
-#define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
-#define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
-
-
 //----------------------
 // GL interop extensions
 //----------------------

@@ -4,9 +4,15 @@
 		
 	Based on : max.jit.gl.receiver
 
+	27.07.15 - conversion to Max 7 SDK
+			 - Version 1.008
+	31.07.15 - Recompiled VS2010 /MT - Vers 1.008.10
+	01.08.15 - Recompiled for Spout 2.004 - 32 bit VS2010 - Version 1.008.10
+	TODO : 01.08.15 - Recompiled for Spout 2.004 - 64bit VS2012 - Version 1.008.12
+
 	=========================================================================================
 
-		Copyright (c) 2014, Lynn Jarvis. All rights reserved.
+		Copyright (c) 2015, Lynn Jarvis. All rights reserved.
 
 		Redistribution and use in source and binary forms, with or without modification, 
 		are permitted provided that the following conditions are met:
@@ -70,8 +76,10 @@ struct FFGLParamInfo {
 
 
 t_jit_err jit_gl_freeframe_init(void);
+
 void *max_jit_gl_freeframe_new(t_symbol *s, long argc, t_atom *argv);
 void max_jit_gl_freeframe_free(t_max_jit_gl_freeframe *x);
+t_class *max_jit_gl_freeframe_class;
 
 // custom draw
 void max_jit_gl_freeframe_bang(t_max_jit_gl_freeframe *x);
@@ -84,62 +92,70 @@ void max_jit_gl_freeframe_getparameter(t_max_jit_gl_freeframe *x, t_symbol *s, l
 // Utility
 void ToLowerCase(char *str);
 
-t_class *max_jit_gl_freeframe_class;
-
 t_symbol *ps_jit_gl_texture, *ps_out_name, *ps_maxdraw, *ps_clear;
 t_symbol *ps_parameter, *ps_numparams;
 t_symbol *ps_effectlist, *ps_out_effect;
 t_symbol *ps_paramlist, *ps_out_param, *ps_out_numparams;
 
-void main(void)
+// MAX 7
+void ext_main(void *r)
+{
+
+/*
+// MAX 6
+int C74_EXPORT main(void)
 {	
-	void *classex, *jitclass;
+*/
+
+	t_class *maxclass, *jitclass;
 	
 	/*
 	// Debug console window so printf works
 	FILE* pCout; // should really be freed on exit 
 	AllocConsole();
 	freopen_s(&pCout, "CONOUT$", "w", stdout); 
-	printf("jit_gl_freeframe - Vers 1.006\n");
+	printf("jit_gl_freeframe - Vers 1.008\n");
 	*/
 
-	post("jit_gl_freeframe - Vers 1.006");
+	post("jit_gl_freeframe - Vers 1.008.10");
+	// post("jit_gl_freeframe - Vers 1.008.12");
 
 	// initialize our Jitter class
 	jit_gl_freeframe_init();	
 	
 	// create our Max class
-	setup((t_messlist **)&max_jit_gl_freeframe_class, 
-		  (method)max_jit_gl_freeframe_new, 
-		  (method)max_jit_gl_freeframe_free, 
-		  (short)sizeof(t_max_jit_gl_freeframe), 
-		  0L, A_GIMME, 0);
-	
+	maxclass = class_new("jit.gl.freeframe", 
+						(method)max_jit_gl_freeframe_new,
+						(method)max_jit_gl_freeframe_free, 
+						sizeof(t_max_jit_gl_freeframe),
+						NULL, A_GIMME, 0);
+
 	// specify a byte offset to keep additional information about our object
-	classex = max_jit_classex_setup(calcoffset(t_max_jit_gl_freeframe, obex));
+	max_jit_class_obex_setup(maxclass, calcoffset(t_max_jit_gl_freeframe, obex));
 	
 	// look up our Jitter class in the class registry
-	jitclass = jit_class_findbyname(gensym("jit_gl_freeframe"));	
+	jitclass = (t_class *)jit_class_findbyname(gensym("jit_gl_freeframe"));
 	
 	// wrap our Jitter class with the standard methods for Jitter objects
-    max_jit_classex_standard_wrap(classex, jitclass, 0); 
+	max_jit_class_wrap_standard(maxclass, jitclass, 0);
 
 	// custom draw handler so we can output our texture.
 	// override default ob3d bang/draw methods
-	addbang((method)max_jit_gl_freeframe_bang);
-	max_addmethod_defer_low((method)max_jit_gl_freeframe_draw, "draw");  
+	class_addmethod(maxclass, (method)max_jit_gl_freeframe_bang, "bang", 0); // TODO - necessary ?
+	class_addmethod(maxclass, (method)max_jit_gl_freeframe_draw, "draw", 0);
+
 
 	// To activate attribute output functions in jitter
-	max_addmethod_defer_low((method)max_jit_gl_freeframe_geteffectlist, "geteffectlist");
-	max_addmethod_defer_low((method)max_jit_gl_freeframe_getparamlist,  "getparamlist");
-	max_addmethod_defer_low((method)max_jit_gl_freeframe_getparameter,  "getparameter");
-	max_addmethod_defer_low((method)max_jit_gl_freeframe_getnumparams,  "getnumparams");
+	class_addmethod(maxclass, (method)max_jit_gl_freeframe_geteffectlist, "geteffectlist", 0);
+	class_addmethod(maxclass, (method)max_jit_gl_freeframe_getparamlist,  "getparamlist", 0);
+	class_addmethod(maxclass, (method)max_jit_gl_freeframe_getparameter,  "getparameter", 0);
+	class_addmethod(maxclass, (method)max_jit_gl_freeframe_getnumparams,  "getnumparams", 0);
 
    	// use standard ob3d assist method
-    addmess((method)max_jit_ob3d_assist, "assist", A_CANT,0);  
+	class_addmethod(maxclass, (method)max_jit_ob3d_assist, "assist", A_CANT, 0); 
 	
 	// add methods for 3d drawing
-    max_ob3d_setup();
+	max_jit_class_ob3d_wrap(maxclass);
 
 	ps_jit_gl_texture = gensym("jit_gl_texture");
 	ps_out_name       = gensym("out_name");
@@ -153,18 +169,20 @@ void main(void)
 	ps_maxdraw        = gensym("maxdraw");
     ps_clear          = gensym("clear");
 
+	// register our class with max
+	class_register(CLASS_BOX, maxclass);
+	max_jit_gl_freeframe_class = maxclass;
+
 }
 
 void max_jit_gl_freeframe_free(t_max_jit_gl_freeframe *x)
 {
 
-	max_jit_ob3d_detach(x);
-
 	// lookup our internal Jitter object instance and free
 	jit_object_free(max_jit_obex_jitob_get(x));
 	
 	// free resources associated with our obex entry
-	max_jit_obex_free(x);
+	max_jit_object_free(x);
 }
 
 
@@ -195,7 +213,8 @@ void max_jit_gl_freeframe_draw(t_max_jit_gl_freeframe *x, t_symbol *s, long argc
 	t_jit_object *jitob = (t_jit_object*)max_jit_obex_jitob_get(x);
 	
 	// call the jitter object's draw method
-	jit_object_method(jitob, s, s, argc, argv);
+	t_symbol *attr = gensym("draw");
+	jit_object_method(jitob, attr, s, argc, argv);
 	
 	// query the texture name and send out the texture output 
 	jit_atom_setsym(&a, jit_attr_getsym(jitob, ps_out_name));
@@ -213,8 +232,6 @@ void max_jit_gl_freeframe_getnumparams(t_max_jit_gl_freeframe *x)
 	vector<FFGLParamInfo> * ParamInfoList;
 	DWORD pParamList; // pointer retrieved from jitter
 	t_jit_object *jitob;
-
-	// printf("max_jit_gl_freeframe_getnumparams\n");
 
 	// get the jitter object
 	jitob = (t_jit_object*)max_jit_obex_jitob_get(x);
@@ -244,12 +261,10 @@ void max_jit_gl_freeframe_getparameter(t_max_jit_gl_freeframe *x, t_symbol *s, l
 	char display[256];
 	char text[256];
 	int i, index;
-	float fValue;
 	t_atom a;
 	t_atom atomList; // parameter list to send out
 	char list[256]; // list string
 	vector<FFGLParamInfo> * ParamInfoList;
-	FFGLParamInfo ParamInfo;
 	DWORD pParamList; // pointer retrieved from jitter
 	t_jit_object *jitob;
 
@@ -272,7 +287,7 @@ void max_jit_gl_freeframe_getparameter(t_max_jit_gl_freeframe *x, t_symbol *s, l
 			// The first arg will be a name or a number
 			name = jit_atom_getsym(&argv[0]);
 			strcpy_s(paramname, MAX_PATH, name->s_name);
-			index = jit_atom_getlong(&argv[0]);
+			index = (int)jit_atom_getlong(&argv[0]);
 
 			// If a parameter name is supplied, look for this name in the paramstruct for this plugin
 			if(strlen(paramname) > 0) {
@@ -413,7 +428,6 @@ void max_jit_gl_freeframe_getparamlist(t_max_jit_gl_freeframe *x)
 
 void max_jit_gl_freeframe_geteffectlist(t_max_jit_gl_freeframe *x)
 {
-	int nSenders;
 	t_atom a;
 	t_atom atomName; // to send out
 	vector<string> * EffectList;
@@ -455,10 +469,11 @@ void *max_jit_gl_freeframe_new(t_symbol *s, long argc, t_atom *argv)
 	long attrstart;
 	t_symbol *dest_name_sym = _jit_sym_nothing;
 	
-	if ((x = (t_max_jit_gl_freeframe *) max_jit_obex_new(max_jit_gl_freeframe_class, gensym("jit_gl_freeframe") ))) {
+	if ((x = (t_max_jit_gl_freeframe *)max_jit_object_alloc(max_jit_gl_freeframe_class, gensym("jit_gl_freeframe"))))
+	{
 		
 		// get first normal arg, the destination name
-		attrstart = max_jit_attr_args_offset(argc,argv);
+		attrstart = max_jit_attr_args_offset((short)argc, argv);
 		if (attrstart && argv) {
 			jit_atom_arg_getsym(&dest_name_sym, 0, attrstart, argv);
 		}
@@ -470,7 +485,7 @@ void *max_jit_gl_freeframe_new(t_symbol *s, long argc, t_atom *argv)
 			max_jit_obex_jitob_set(x, jit_ob);
 			
 			// process attribute arguments 
-			max_jit_attr_args(x, argc, argv);
+			max_jit_attr_args(x, (short)argc, argv);
 
 			// add a general purpose outlet (rightmost)
 			x->dumpout = outlet_new(x,NULL);

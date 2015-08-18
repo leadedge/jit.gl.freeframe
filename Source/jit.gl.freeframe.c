@@ -61,10 +61,17 @@
 	11.02.15 - Check for GL context on jit_gl_freeframe_free before unloading plugin and free GL resources
 			 - added Optimus enablement export
 			   Vers 1.006
+	23.02.15 - Removed OptimusEnablement export because it does not work in a plugin
+			 - jit_gl_freeframe_param : prevented jit_atom_getlong error if the string is not mumeric
+	24.04.15 - cleanup
+			 - recompile for dual DirectX option installer
+			 - Vers 1.007
+	27.07.15 - conversion to Max 7 SDK
+	01.08.15 - Recompiled for Spout 2.004 - 32 bit VS2010 - Version 1.008.10
 
 	=========================================================================================
 
-	Copyright (c) 2014, Lynn Jarvis. All rights reserved.
+	Copyright (c) 2015, Lynn Jarvis. All rights reserved.
 
 	Redistribution and use in source and binary forms, with or without modification, 
 	are permitted provided that the following conditions are met:
@@ -120,10 +127,6 @@ using namespace std;
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 #endif
 
-// This allows the Optimus global 3d setting to be "adapt" instead of "high performance"
-extern "C" {
-    _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
-}
 
 struct FFGLParamInfo {
 	float value;      // float value (default)
@@ -167,7 +170,8 @@ typedef struct _jit_gl_freeframe
 
 	// attributes
 	long param;  // Plugin parameter
-	long dim[2]; // Output dim
+	// long dim[2]; // Output dim
+	t_atom_long dim[2]; // Output dim
 	long bypass; // Bypass the effect and just hand on the incoming texture
 	long paramdialog;
 
@@ -207,6 +211,7 @@ void *_jit_gl_freeframe_class;
 
 // init/constructor/free
 t_jit_err jit_gl_freeframe_init(void);
+
 t_jit_gl_freeframe *jit_gl_freeframe_new(t_symbol * dest_name);
 void jit_gl_freeframe_free(t_jit_gl_freeframe *x);
 
@@ -512,9 +517,9 @@ t_jit_gl_freeframe *jit_gl_freeframe_new(t_symbol * dest_name)
 			x->textureSource = name;
 
 			t_jit_object *texture = (t_jit_object*)jit_object_findregistered(x->textureSource);
-			GLuint texname	= jit_attr_getlong(texture, ps_glid);
-			GLuint inwidth	= jit_attr_getlong(texture, ps_width);
-			GLuint inheight	= jit_attr_getlong(texture, ps_height);
+			GLuint texname	= (GLuint)jit_attr_getlong(texture, ps_glid);
+			GLuint inwidth	= (GLuint)jit_attr_getlong(texture, ps_width);
+			GLuint inheight	= (GLuint)jit_attr_getlong(texture, ps_height);
 		} 
 		else {
 			jit_object_error((t_object *)x,"jit.gl.freeframe : could not create input texture");
@@ -535,9 +540,9 @@ t_jit_gl_freeframe *jit_gl_freeframe_new(t_symbol * dest_name)
 			x->textureSource2 = name;
 
 			t_jit_object *texture = (t_jit_object*)jit_object_findregistered(x->textureSource2);
-			GLuint texname	= jit_attr_getlong(texture, ps_glid);
-			GLuint inwidth	= jit_attr_getlong(texture, ps_width);
-			GLuint inheight	= jit_attr_getlong(texture, ps_height);
+			GLuint texname	= (GLuint)jit_attr_getlong(texture, ps_glid);
+			GLuint inwidth	= (GLuint)jit_attr_getlong(texture, ps_width);
+			GLuint inheight	= (GLuint)jit_attr_getlong(texture, ps_height);
 		} 
 		else {
 			jit_object_error((t_object *)x,"jit.gl.freeframe : could not create input texture");
@@ -557,8 +562,8 @@ t_jit_gl_freeframe *jit_gl_freeframe_new(t_symbol * dest_name)
 			x->dim[0] = 640;
 			x->dim[1] = 480;
 			// Set the intial global width and height here too
-			x->g_Width  = x->dim[0];
-			x->g_Height = x->dim[1];
+			x->g_Width  = (unsigned int)x->dim[0];
+			x->g_Height = (unsigned int)x->dim[1];
 			jit_attr_setlong_array(x->output, _jit_sym_dim, 2, x->dim);
         } 
 		else {
@@ -770,19 +775,18 @@ t_jit_err jit_gl_freeframe_draw(t_jit_gl_freeframe *x)
 
 	jit_gl_drawinfo_setup(x, &drawInfo);
 
-
 	// We need the Jitter input texture info
 	t_jit_object *texture = (t_jit_object*)jit_object_findregistered(x->textureSource);
-	GLuint texname	= jit_attr_getlong(texture, ps_glid);
-	GLuint inwidth	= jit_attr_getlong(texture, ps_width);
-	GLuint inheight	= jit_attr_getlong(texture, ps_height);
+	GLuint texname	= (GLuint)jit_attr_getlong(texture, ps_glid);
+	GLuint inwidth	= (GLuint)jit_attr_getlong(texture, ps_width);
+	GLuint inheight	= (GLuint)jit_attr_getlong(texture, ps_height);
 
 	// Is there a second input texture to use ?
 	t_jit_object *texture2 = (t_jit_object*)jit_object_findregistered(x->textureSource2);
-	GLuint texname2 = jit_attr_getlong(texture2, ps_glid);
+	GLuint texname2 = (GLuint)jit_attr_getlong(texture2, ps_glid);
 
 	// Get the ID of the output texture object
-	GLuint outname  = jit_attr_getlong(x->output, ps_glid);
+	GLuint outname  = (GLuint)jit_attr_getlong(x->output, ps_glid);
 
 	// Load a plugin if it is not initialized
 	if(!x->bInitialized) {
@@ -876,8 +880,8 @@ t_jit_err jit_gl_freeframe_draw(t_jit_gl_freeframe *x)
 		// Otherwise for a source plugin, or an effect plugin without any 
 		// inputs and no input texture, the ffgl texture size is linked
 		// to the user defined output dimension, so check it here
-		x->g_Width  = x->dim[0];
-		x->g_Height = x->dim[1];
+		x->g_Width  = (unsigned int)x->dim[0];
+		x->g_Height = (unsigned int)x->dim[1];
 
 		// Reset the FFGL textures
 		if(x->ffglTexture.Handle != 0) glDeleteTextures(1, &x->ffglTexture.Handle);
@@ -1225,7 +1229,8 @@ t_jit_err jit_gl_freeframe_param(t_jit_gl_freeframe *x, void *attr, long argc, t
 	char paramname[MAX_PATH];
 	char paramstring[MAX_PATH];
 	float fValue;
-	int i, index;
+	int i;
+	int index = -1;
 
 	// If there is no plugin loaded don't do anything
 	if(!x->bPluginLoaded) {
@@ -1240,7 +1245,11 @@ t_jit_err jit_gl_freeframe_param(t_jit_gl_freeframe *x, void *attr, long argc, t
 			strcpy_s(paramname, MAX_PATH, name->s_name);
 			ToLowerCase(paramname); // not case sensitive
 
-			index = jit_atom_getlong(&argv[0]);
+			// Will return a null string if the argument was a number
+			// jit_atom_getlong will create an eror if the string is not mumeric
+			if(*paramname == NULL) {
+				index = (int)jit_atom_getlong(&argv[0]);
+			}
 
 			if(argc > 1) {
 				// More than one arg means a parameter with a value
@@ -1353,7 +1362,7 @@ t_jit_err jit_gl_freeframe_reload(t_jit_gl_freeframe *x, void *attr, long argc, 
 t_jit_err jit_gl_freeframe_setattr_dim(t_jit_gl_freeframe *x, void *attr, long argc, t_atom *argv)
 {
     long i;
-	long v;
+	t_atom_long v;
 
 	if (x) 	{
 
@@ -1453,7 +1462,7 @@ t_jit_err jit_gl_freeframe_getattr_out_param(t_jit_gl_freeframe *x, void *attr, 
 			if(dwRetValue != FF_FAIL) {
 				pDisplay = (char *)dwRetValue;
 				if(pDisplay) {
-					//FreeFrame spec defines parameter names to be 16 characters long MAX
+					// FreeFrame spec defines parameter names to be 16 characters long MAX
 					// Up to 16 chars not null terminated
 					// CopyString adds the null
 					CopyString(x->ParamInfoList.at(i).display, pDisplay, 16);
@@ -1743,22 +1752,10 @@ FFGLTextureStruct CreateFFGLtexture(GLuint glTextureHandle, int textureWidth, in
 bool DrawGLTexture(GLuint sourceTexture, GLuint sourceTarget)
 {
 
-	/*
-	glColor4f(1.f, 0.f, 0.f, 1.f);
-	glBegin(GL_QUADS);
-	glVertex3f(-1,-1,0);
-	glVertex3f(-1,1,0);
-	glVertex3f(1,1,0);
-	glVertex3f(1,-1,0);
-	glEnd();
-	*/
-
 	glEnable(sourceTarget);
 	glBindTexture(sourceTarget, sourceTexture); // bind source texture
 
-	// glEnable (GL_BLEND); 
-	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glColor4f(1.f, 0.f, 0.f, 1.f);
+	glColor4f(1.f, 1.f, 1.f, 1.f);
 
 	glBegin(GL_QUADS);
 	glTexCoord2f(0.0, 0.0);	glVertex2f(-1.0,-1.0); // lower left
@@ -1767,11 +1764,8 @@ bool DrawGLTexture(GLuint sourceTexture, GLuint sourceTarget)
 	glTexCoord2f(1.0, 0.0);	glVertex2f( 1.0,-1.0); // lower right
 	glEnd();
 
-	// glDisable(GL_BLEND); 
-
 	glBindTexture(sourceTarget, 0); // unbind source texture
 	glDisable(sourceTarget);
-	
 
 	return true;
 
@@ -2187,7 +2181,7 @@ LRESULT CALLBACK PluginParameters(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 	float fValue;
 	char value[16];
 	static HWND hBar, hBox;
-	DWORD dwParam;
+	// DWORD dwParam;
 	char text[256];
 	RECT rc;
 
@@ -2323,7 +2317,7 @@ LRESULT CALLBACK PluginParameters(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 						ScrollBarPos[i] = iPos;
 						SetScrollPos (hBar, SB_CTL, iPos, TRUE);
 						// Safety
-						fValue = ((float)iPos)/100.0;
+						fValue = ((float)iPos)/100.0f;
 						if(fValue < 0.0) fValue = 0.0;
 						if(fValue > 1.0) fValue = 1.0;
 						sprintf_s(value, 16, "%4.2f", fValue);
@@ -2548,7 +2542,7 @@ HMODULE GetCurrentModule()
 
 void trim(char * s) {
     char * p = s;
-    int l = strlen(p);
+    int l = (int)strlen(p);
 
     while(isspace(p[l - 1])) p[--l] = 0;
     while(* p && isspace(* p)) ++p, --l;
